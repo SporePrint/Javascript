@@ -1,0 +1,72 @@
+function formatSheetWithEmployeeData() {
+  // Make API call
+  var apiKey = 'YOUR_API_KEY_HERE';
+  var apiUrl = 'https://api.torn.com/company/?selections=employees&key=' + apiKey;
+  var response = UrlFetchApp.fetch(apiUrl, { headers: { 'Authorization': 'Bearer ' + apiKey } });
+  var employeeData = JSON.parse(response.getContentText()).company_employees;
+
+  // Get the active spreadsheet (change the ID to your spreadsheet ID)
+  var spreadsheetId = 'YOUR_SHEET_ID_HERE';
+  var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+
+  // Create a new sheet or get existing sheet
+  var sheetName = 'Employee Data';
+  var newSheet = spreadsheet.getSheetByName(sheetName);
+  if (!newSheet) {
+    newSheet = spreadsheet.insertSheet(sheetName);
+  }
+
+  // Initialize variables to track row and column indices
+  var rowIndex = newSheet.getLastRow() + 1; // Start from the next row after existing data
+  var columnIndex = 1;
+
+  // Add ID column
+  newSheet.getRange(1, columnIndex).setValue('ID').setFontWeight('bold').setHorizontalAlignment('center');
+  for (var i = 1; i <= 33; i++) {
+    newSheet.getRange(rowIndex + i, columnIndex).setValue(i);
+  }
+
+  // Add Date column
+  newSheet.getRange(1, columnIndex + 1).setValue('Date').setFontWeight('bold').setHorizontalAlignment('center');
+  var currentDate = new Date().toLocaleDateString();
+  for (var i = 1; i <= 33; i++) {
+    newSheet.getRange(rowIndex + i, columnIndex + 1).setValue(i == 2 ? currentDate : '--');
+  }
+
+  // Move to the next column
+  columnIndex += 2;
+
+  // Iterate through each employee
+  for (var employeeId in employeeData) {
+    var employee = employeeData[employeeId];
+
+    // Set main header (employee name) and center text across multiple columns
+    var mainHeaderRange = newSheet.getRange(rowIndex, columnIndex, 1, 6);
+    mainHeaderRange.setValue(employee.name).setFontWeight('bold').setHorizontalAlignment('center');
+
+    // Set secondary headers with bold formatting
+    var secondaryHeadersRange = newSheet.getRange(rowIndex + 1, columnIndex, 1, 6);
+    secondaryHeadersRange.setValues([
+      ['Position', 'Manual Labor', 'Endurance', 'Intelligence', 'Total Effectiveness', 'Last Action Relative']
+    ]).setFontWeight('bold').setHorizontalAlignment('center');
+
+    // Set values for secondary headers and data
+    newSheet.getRange(rowIndex + 2, columnIndex).setValue(employee.position);
+    newSheet.getRange(rowIndex + 2, columnIndex + 1).setValue(employee.manual_labor);
+    newSheet.getRange(rowIndex + 2, columnIndex + 2).setValue(employee.endurance);
+    newSheet.getRange(rowIndex + 2, columnIndex + 3).setValue(employee.intelligence);
+    newSheet.getRange(rowIndex + 2, columnIndex + 4).setValue(employee.effectiveness.total);
+    newSheet.getRange(rowIndex + 2, columnIndex + 5).setValue(employee.last_action.relative);
+
+    // Merge cells for the main header (employee name)
+    mainHeaderRange.merge();
+
+    // Move to the next set of columns for the next employee
+    columnIndex += 6;
+  }
+
+  // Autofit column widths
+  newSheet.autoResizeColumns(1, newSheet.getLastColumn());
+
+  Logger.log('Sheet formatted with employee data.');
+}
